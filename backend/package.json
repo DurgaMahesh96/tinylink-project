@@ -1,0 +1,16 @@
+﻿{
+  "name": "tinylink",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.19.0",
+    "express-async-handler": "^1.2.0",
+    "pg": "^8.11.0",
+    "valid-url": "^1.0.9"
+  }
+}

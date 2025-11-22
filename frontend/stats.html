@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>TinyLink — Stats</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+  <style>
+    :root {
+      --bg:#071029; --card:#0b1524; --accent:#39A2FF; --muted:#9fb2c8;
+    }
+    body { background:var(--bg); color:#E6F0FA; }
+    .card { background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02)); border: 1px solid rgba(255,255,255,0.03); }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace; }
+    .toast { position: fixed; right: 20px; bottom: 20px; z-index: 60; }
+  </style>
+</head>
+<body>
+  <div class="max-w-3xl mx-auto p-6">
+    <a href="index.html" class="text-sm text-slate-400">← Back</a>
+
+    <div class="mt-4 card p-6 rounded-lg">
+      <h2 id="codeTitle" class="text-2xl font-semibold mono"></h2>
+      <p id="targetLine" class="mt-2 text-sm text-slate-300"></p>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+        <div class="p-4 rounded bg-[#061220]">
+          <div class="text-xs text-slate-400">Clicks</div>
+          <div id="clicks" class="text-3xl font-bold mt-2">0</div>
+        </div>
+        <div class="p-4 rounded bg-[#061220]">
+          <div class="text-xs text-slate-400">Last Clicked</div>
+          <div id="lastClicked" class="text-sm mt-2">Never</div>
+        </div>
+        <div class="p-4 rounded bg-[#061220]">
+          <div class="text-xs text-slate-400">Created at</div>
+          <div id="createdAt" class="text-sm mono mt-2">—</div>
+        </div>
+      </div>
+
+      <div class="mt-6 flex items-center gap-3">
+        <a id="openTarget" class="px-3 py-2 rounded text-white" style="background:var(--accent)" target="_blank">Open target</a>
+        <button id="copyBtn" class="px-3 py-2 rounded glass">Copy short URL</button>
+        <button id="qrBtn" class="px-3 py-2 rounded glass">Show QR</button>
+        <button id="delBtn" class="px-3 py-2 rounded" style="background:#FF5C6C;color:white">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR modal -->
+  <div id="qrModal" class="fixed inset-0 hidden items-center justify-center bg-black/60 z-40">
+    <div class="bg-[#02101a] p-5 rounded shadow-lg text-center">
+      <h3 class="font-semibold mb-2">QR Code</h3>
+      <canvas id="qrCanvas"></canvas>
+      <div class="mt-3">
+        <button id="closeQr" class="px-3 py-1 rounded glass">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (async () => {
+      const API_BASE = "http://localhost:3000";
+      const params = new URLSearchParams(location.search);
+      const code = params.get('code');
+      if (!code) { document.body.innerHTML = '<div class="p-6">Missing code. <a href="index.html">Back</a></div>'; return; }
+
+      try {
+        const res = await fetch(`${API_BASE}/api/links/${code}`);
+        if (!res.ok) throw new Error('Not found');
+        const data = await res.json();
+
+        document.getElementById('codeTitle').innerText = data.code;
+        document.getElementById('targetLine').innerText = data.target;
+        document.getElementById('clicks').innerText = data.clicks ?? 0;
+        document.getElementById('lastClicked').innerText = data.last_clicked ?? 'Never';
+        document.getElementById('createdAt').innerText = data.created_at ?? '';
+        document.getElementById('openTarget').href = data.target;
+
+        const short = `${location.origin.replace(location.pathname,'')}/${data.code}`;
+
+        document.getElementById('copyBtn').onclick = async () => {
+          await navigator.clipboard.writeText(short).catch(()=>{});
+          showToast('Copied: ' + short);
+        };
+
+        const qrBtn = document.getElementById('qrBtn');
+        const qrModal = document.getElementById('qrModal');
+        const qrCanvas = document.getElementById('qrCanvas');
+        const closeQr = document.getElementById('closeQr');
+
+        qrBtn.onclick = () => {
+          qrModal.classList.remove('hidden');
+          new QRious({ element: qrCanvas, value: short, size: 200 });
+        };
+        closeQr.onclick = () => qrModal.classList.add('hidden');
+
+        document.getElementById('delBtn').onclick = async () => {
+          if (!confirm('Delete this short link?')) return;
+          const d = await fetch(`${API_BASE}/api/links/${code}`, { method: 'DELETE' });
+          if (d.ok) {
+            alert('Deleted — back to dashboard');
+            location.href = 'index.html';
+          } else {
+            alert('Delete failed');
+          }
+        };
+      } catch (e) {
+        document.body.innerHTML = '<div class="p-6">Link not found or server error. <a href="index.html">Back</a></div>';
+      }
+
+      function showToast(msg) {
+        const t = document.createElement('div');
+        t.className = 'px-4 py-2 bg-slate-900 text-white rounded mb-2';
+        t.innerText = msg;
+        const holder = document.createElement('div');
+        holder.className = 'toast fixed right-4 bottom-4 z-50';
+        holder.appendChild(t);
+        document.body.appendChild(holder);
+        setTimeout(()=> holder.remove(), 2500);
+      }
+    })();
+  </script>
+</body>
+</html>

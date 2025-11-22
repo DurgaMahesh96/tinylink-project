@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>TinyLink — Dark Premium Dashboard</title>
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- QR lib -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+
+  <style>
+    /* Theme override for a premium dark look */
+    :root {
+      --bg: #071029;           /* deep navy */
+      --card: #0b1524;
+      --muted: #9fb2c8;
+      --accent: #39A2FF;       /* neon blue */
+      --danger: #FF5C6C;
+      --success: #2DD4BF;
+      --glass: rgba(255,255,255,0.04);
+    }
+
+    body { background: var(--bg); color: #E6F0FA; }
+    .card { background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02)); border: 1px solid rgba(255,255,255,0.03); }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace; }
+    .skeleton { background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.02) 50%, rgba(255,255,255,0.03) 75%); background-size: 200% 100%; animation: shine 1.2s linear infinite; }
+    @keyframes shine { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+    .glass { background: var(--glass); border: 1px solid rgba(255,255,255,0.03); }
+    .btn-accent { background: linear-gradient(90deg,var(--accent), #2e9cff); box-shadow: 0 6px 18px rgba(57,162,255,0.12); }
+    .btn-accent:hover { transform: translateY(-1px); }
+    .toast { position: fixed; right: 20px; bottom: 20px; z-index: 60; }
+    .table-head th { position: sticky; top:0; backdrop-filter: blur(4px); }
+    @media (max-width: 768px) { aside { display:none; } }
+  </style>
+</head>
+<body>
+  <div class="min-h-screen flex">
+    <!-- Sidebar -->
+    <aside class="md:flex md:flex-col w-72 p-6 hidden">
+      <div class="mb-6">
+        <h1 class="text-2xl font-bold" style="color:var(--accent)">TinyLink</h1>
+        <p class="text-sm text-slate-400 mt-1">Dark Premium · Short Links & Analytics</p>
+      </div>
+
+      <nav class="flex-1 space-y-2">
+        <button class="w-full text-left flex items-center gap-3 p-2 rounded glass" id="navHome">
+          <span class="text-lg">🏠</span><span>Dashboard</span>
+        </button>
+        <button id="navCreate" class="w-full text-left flex items-center gap-3 p-2 rounded hover:bg-white/3">➕ Create</button>
+        <button id="navStats" class="w-full text-left flex items-center gap-3 p-2 rounded hover:bg-white/3">📊 Open stats</button>
+        <a href="/mnt/data/Take-Home Assignment_ TinyLink (1) (2).pdf" class="w-full inline-flex items-center gap-3 p-2 rounded hover:bg-white/3" target="_blank">📎 Assignment PDF</a>
+      </nav>
+
+      <div class="mt-6 text-xs text-slate-400">
+        <div>Backend: <span id="backendStatus" class="mono">checking...</span></div>
+        <div class="mt-1">API: <span class="mono">http://localhost:3000</span></div>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="flex-1 p-6">
+      <!-- Header -->
+      <header class="flex items-center justify-between mb-6">
+        <div>
+          <h2 class="text-xl font-semibold">Dashboard</h2>
+          <p class="text-sm text-slate-400">Overview & quick actions</p>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <label class="flex items-center gap-2 text-sm text-slate-300">
+            <input id="themeToggle" type="checkbox" class="w-5 h-5" />
+            Dark
+          </label>
+          <button id="refreshBtn" class="px-3 py-1 rounded text-sm glass">Refresh</button>
+        </div>
+      </header>
+
+      <!-- Top area -->
+      <section class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div class="card p-4 rounded-lg glass lg:col-span-1">
+          <h3 class="font-semibold mb-2">Create Short Link</h3>
+          <small class="text-xs text-slate-400">Leave code blank to auto-generate</small>
+          <input id="target" class="mt-3 w-full border border-transparent rounded px-3 py-2 bg-transparent outline-none glass focus:ring-1" placeholder="https://example.com/very/long/url" />
+          <input id="code" class="mt-2 w-full border border-transparent rounded px-3 py-2 bg-transparent outline-none glass focus:ring-1" placeholder="Custom code (optional)" />
+          <div class="flex gap-2 mt-3">
+            <button id="createBtn" class="btn-accent text-white px-4 py-2 rounded">Create</button>
+            <button id="createExample" class="px-3 py-2 rounded glass">Example</button>
+          </div>
+          <p id="createMsg" class="mt-2 text-sm text-slate-300"></p>
+        </div>
+
+        <div class="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="card p-4 rounded-lg glass">
+            <div class="text-sm text-slate-400">Total links</div>
+            <div id="totalLinks" class="text-2xl font-bold mt-2">0</div>
+          </div>
+          <div class="card p-4 rounded-lg glass">
+            <div class="text-sm text-slate-400">Total clicks</div>
+            <div id="totalClicks" class="text-2xl font-bold mt-2">0</div>
+          </div>
+          <div class="card p-4 rounded-lg glass">
+            <div class="text-sm text-slate-400">Last created</div>
+            <div id="lastCreated" class="mono mt-2">—</div>
+          </div>
+
+          <div class="md:col-span-3 bg-transparent p-4 mt-2">
+            <div class="flex items-center justify-between">
+              <div class="text-sm text-slate-200 font-medium">Top 5 Links</div>
+              <div class="text-xs text-slate-400">Live analytics</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Controls -->
+      <section class="mt-6 card p-4 rounded-lg glass">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div class="flex items-center gap-2">
+            <input id="searchInput" class="w-64 px-3 py-2 rounded bg-transparent outline-none glass" placeholder="Search code or target" />
+            <select id="sortBy" class="px-3 py-2 rounded glass">
+              <option value="created_desc">Newest</option>te
+              <option value="clicks_desc">Most clicked</option>
+            </select>
+            <button id="bulkRefresh" class="px-3 py-2 rounded glass">Reload</button>
+          </div>
+
+          <div class="text-sm text-slate-400">
+            <span class="mono">/</span> Open short link:
+            <input id="openCode" class="ml-2 px-2 py-1 rounded bg-transparent outline-none glass mono w-36" placeholder="enter code" />
+            <button id="openBtn" class="ml-2 px-2 py-1 rounded glass">Open</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Table -->
+      <section class="mt-6">
+        <div class="overflow-x-auto card rounded-lg glass">
+          <table class="w-full">
+            <thead class="text-sm text-slate-400 table-head">
+              <tr>
+                <th class="px-4 py-3 text-left w-36">Code</th>
+                <th class="px-4 py-3 text-left">Target</th>
+                <th class="px-4 py-3 w-28 text-center">Clicks</th>
+                <th class="px-4 py-3 w-44">Last Clicked</th>
+                <th class="px-4 py-3 w-48 text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="linksTbody" class="text-sm min-h-[120px]"></tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="mt-3 flex items-center justify-between">
+          <div class="text-sm text-slate-400">Showing <span id="pageInfo"></span></div>
+          <div class="flex items-center gap-2">
+            <button id="prevPage" class="px-3 py-1 rounded glass">Prev</button>
+            <button id="nextPage" class="px-3 py-1 rounded glass">Next</button>
+            <select id="pageSize" class="px-2 py-1 rounded glass">
+              <option value="5">5 / page</option>
+              <option value="10" selected>10 / page</option>
+              <option value="20">20 / page</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <footer class="mt-6 text-xs text-slate-400">
+        © TinyLink · Dark Premium · API: <span class="mono">http://localhost:3000</span>
+      </footer>
+    </main>
+  </div>
+
+  <!-- QR modal -->
+  <div id="qrModal" class="fixed inset-0 hidden items-center justify-center bg-black/60 z-40">
+    <div class="bg-[#02101a] p-5 rounded shadow-lg text-center">
+      <h3 class="font-semibold mb-2">QR Code</h3>
+      <canvas id="qrCanvas"></canvas>
+      <div class="mt-3">
+        <button id="closeQr" class="px-3 py-1 rounded glass">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast holder -->
+  <div id="toast" class="toast"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>

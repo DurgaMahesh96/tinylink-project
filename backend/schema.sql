@@ -1,0 +1,9 @@
+CREATE TABLE IF NOT EXISTS links (
+  id SERIAL PRIMARY KEY,
+  code VARCHAR(8) UNIQUE NOT NULL,
+  target TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  last_clicked TIMESTAMP,
+  clicks INTEGER DEFAULT 0,
+  deleted BOOLEAN DEFAULT false
+);

@@ -1,0 +1,6 @@
+/* extra style helpers for dark premium - optional */
+body { background:#071029; color:#E6F0FA; }
+.card { border-radius:10px; }
+.glass { background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.03); }
+.skeleton { border-radius:6px; }
+.btn-accent { background:linear-gradient(90deg,#39A2FF,#2e9cff); color:white; }
